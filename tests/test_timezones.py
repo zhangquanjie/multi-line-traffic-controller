@@ -10,4 +10,3 @@ assert local_time_text(datetime(2026, 10, 31, 1, 22, 39)) == "2026/10/31 09:22:3
 set_app_timezone("Asia/Dushanbe")
 assert local_time_text(datetime(2026, 10, 31, 1, 22, 39)) == "2026/10/31 06:22:39"
 print("web timezone conversion test passed")
-

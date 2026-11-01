@@ -351,4 +351,3 @@ def logs(limit: int = 100, db: Session = Depends(get_db)):
              "created_at_display": local_time_text(x.created_at),
              "action": x.action, "success": x.success, "message": x.message} for x in rows]
 
-

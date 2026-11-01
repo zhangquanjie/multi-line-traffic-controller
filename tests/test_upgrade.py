@@ -66,4 +66,3 @@ try:
 finally:
     engine.dispose()
     db_path.unlink(missing_ok=True)
-

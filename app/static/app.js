@@ -32,4 +32,3 @@ $('#settingsForm').onsubmit=async e=>{e.preventDefault();const f=e.target,second
 async function loadLogs(){const d=await api('/api/logs');$('#logRows').innerHTML=d.map(x=>`<tr><td>${esc(x.created_at_display)}</td><td>${esc(x.line)}</td><td>${esc(x.action)}</td><td>${x.success?'成功':'失败'}</td><td>${esc(x.message)}</td></tr>`).join('')||'<tr><td colspan="5">暂无日志</td></tr>'}
 $$('nav button').forEach(b=>b.onclick=()=>{$$('nav button,.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');$('#'+b.dataset.tab).classList.add('active');if(b.dataset.tab==='devices')loadFirewalls();if(b.dataset.tab==='settings')loadSettings();if(b.dataset.tab==='logs')loadLogs()});
 loadDashboard().catch(e=>toast(e.message,true));setInterval(()=>{if($('#dashboard').classList.contains('active'))loadDashboard().catch(()=>{})},10000);
-

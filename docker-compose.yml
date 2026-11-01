@@ -18,4 +18,3 @@ volumes:
   traffic-data:
     name: traffic-controller-data
 
-

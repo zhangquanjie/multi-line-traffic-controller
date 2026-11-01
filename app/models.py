@@ -113,4 +113,3 @@ class ActionLog(Base):
     success: Mapped[bool] = mapped_column(Boolean, default=True)
     message: Mapped[str] = mapped_column(Text, default="")
 
-

@@ -260,4 +260,3 @@ async def poll_all() -> None:
                 db.add(ActionLog(line_id=line.id, action="poll", success=False, message=str(exc)))
                 db.commit()
 
-
