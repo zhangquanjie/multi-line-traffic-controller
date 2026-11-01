@@ -1,0 +1,21 @@
+services:
+  traffic-controller:
+    build: .
+    container_name: traffic-controller
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-now}
+      DATABASE_URL: sqlite:////data/traffic.db
+      POLL_SECONDS: ${POLL_SECONDS:-300}
+    volumes:
+      - traffic-data:/data
+
+volumes:
+  traffic-data:
+    name: traffic-controller-data
+
+

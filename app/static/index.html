@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>多线路流量控制器</title>
+  <link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/snmp.css">
+</head>
+<body>
+<header><div><h1>多线路流量控制器</h1><p>多防火墙 · SNMP 自动采集 · 实时速率 · H3C SSH 限额关停</p></div><span id="mode" class="badge"></span></header>
+<main>
+  <nav><button data-tab="dashboard" class="active">线路概览</button><button data-tab="devices">防火墙设备</button><button data-tab="settings">系统设置</button><button data-tab="logs">操作日志</button></nav>
+  <section id="dashboard" class="tab active"><div class="toolbar"><button class="primary" onclick="openLine()">＋ 添加线路</button><button onclick="pollAll()">立即采集全部</button><span id="summary"></span></div><div id="cards" class="cards"></div></section>
+  <section id="devices" class="tab"><div class="toolbar"><button class="primary" onclick="openFirewall()">＋ 添加防火墙</button><span id="deviceSummary"></span></div><div id="deviceCards" class="cards"></div></section>
+  <section id="settings" class="tab"><div class="panel"><h2>系统设置</h2><form id="settingsForm" class="form-grid">
+    <label>自动采集间隔<select name="poll_select" onchange="toggleCustomPoll()"><option value="30">30 秒</option><option value="60">1 分钟</option><option value="120">2 分钟</option><option value="300">5 分钟</option><option value="600">10 分钟</option><option value="900">15 分钟</option><option value="1800">30 分钟</option><option value="3600">1 小时</option><option value="custom">自定义</option></select></label>
+    <label id="customPoll" hidden>自定义秒数<input name="poll_seconds" type="number" min="30" max="86400" value="300"></label>
+    <label>系统时区<input name="timezone" list="timezoneList" value="Asia/Shanghai" required placeholder="Asia/Shanghai"><datalist id="timezoneList"><option value="Asia/Shanghai"><option value="Asia/Hong_Kong"><option value="Asia/Dushanbe"><option value="Asia/Urumqi"><option value="UTC"></datalist></label>
+    <label class="switch"><input name="dry_run" type="checkbox" checked> 模拟模式（不真正执行 SSH 命令）</label>
+    <div class="wide warning">达到额度自动关停前，请先在模拟模式验证接口、ifIndex 和设备归属。系统当前时间：<strong id="currentTime"></strong></div><button class="primary" type="submit">保存设置</button>
+  </form></div></section>
+  <section id="logs" class="tab"><div class="panel"><h2>最近操作</h2><div class="table-wrap"><table><thead><tr><th>时间</th><th>线路</th><th>动作</th><th>结果</th><th>详情</th></tr></thead><tbody id="logRows"></tbody></table></div></div></section>
+</main>
+<dialog id="lineDialog"><form id="lineForm"><h2 id="lineTitle">添加线路</h2><input type="hidden" name="id">
+  <label>所属防火墙<select name="firewall_id" required></select></label><label>线路名称<input name="name" required placeholder="运营商 A"></label><label>防火墙接口<input name="interface" required placeholder="GigabitEthernet 1/0/1.100"></label>
+  <label>SNMP ifIndex<input name="if_index" required type="number" min="1"></label><label>流量额度（GB）<input name="quota_gb" required type="number" min="0.001" step="0.001"></label><label>每月计费起始日<input name="billing_day" required type="number" min="1" max="31" value="1"></label>
+  <label class="switch"><input name="enabled" type="checkbox" checked> 启用采集</label><label class="switch"><input name="auto_shutdown" type="checkbox" checked> 达限额自动关停</label><div class="dialog-actions"><button type="button" onclick="lineDialog.close()">取消</button><button class="primary">保存</button></div>
+</form></dialog>
+<dialog id="firewallDialog" class="large-dialog"><form id="firewallForm"><h2 id="firewallTitle">添加防火墙</h2><input type="hidden" name="id"><div class="form-grid">
+  <label>设备名称<input name="name" required placeholder="总部防火墙"></label><span></span><label>SSH 地址<input name="firewall_host" required placeholder="10.0.0.1"></label><label>SSH 端口<input name="firewall_port" type="number" value="22" required></label><label>SSH 用户名<input name="firewall_username"></label><label>SSH 密码<input name="firewall_password" type="password" placeholder="留空表示不修改"></label>
+  <label>SNMP 地址<input name="snmp_host" required></label><label>SNMP 端口<input name="snmp_port" type="number" value="161" required></label><label>SNMP 版本<select name="snmp_version" onchange="toggleFirewallSnmp()"><option value="v2c">v2c</option><option value="v3">v3</option></select></label><span></span>
+  <div class="wide sub-grid fw-v2"><label>Community<input name="snmp_community" type="password" placeholder="留空表示不修改"></label></div>
+  <div class="wide sub-grid fw-v3" hidden><label>v3 用户名<input name="snmp_v3_username"></label><label>安全级别<select name="snmp_v3_security_level" onchange="toggleFirewallSecurity()"><option value="authPriv">authPriv（认证和加密）</option><option value="authNoPriv">authNoPriv（仅认证）</option><option value="noAuthNoPriv">noAuthNoPriv</option></select></label><label class="fw-auth">认证算法<select name="snmp_v3_auth_protocol"><option>SHA</option><option>MD5</option><option>SHA224</option><option>SHA256</option><option>SHA384</option><option>SHA512</option></select></label><label class="fw-auth">认证密码<input name="snmp_v3_auth_password" type="password" placeholder="留空表示不修改"></label><label class="fw-priv">加密算法<select name="snmp_v3_priv_protocol"><option value="AES">AES-128</option><option value="DES">DES</option><option value="AES192">AES-192</option><option value="AES256">AES-256</option></select></label><label class="fw-priv">加密密码<input name="snmp_v3_priv_password" type="password" placeholder="留空表示不修改"></label><label>Context（通常留空）<input name="snmp_v3_context"></label></div>
+  </div><div class="dialog-actions"><button type="button" onclick="firewallDialog.close()">取消</button><button class="primary">保存设备</button></div></form></dialog>
+<dialog id="adjustDialog"><form id="adjustForm"><h2>校准运营商流量</h2><input type="hidden" name="id"><p id="adjustHint"></p><label>本计费周期累计流量（GB）<input name="total_gb" type="number" min="0" step="0.001" required></label><label>备注<input name="note" value="运营商数据校准"></label><div class="dialog-actions"><button type="button" onclick="adjustDialog.close()">取消</button><button class="primary">确认校准</button></div></form></dialog>
+<div id="toast"></div><script src="/static/app.js"></script>
+</body></html>
+
