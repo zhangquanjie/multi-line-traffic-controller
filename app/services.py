@@ -2,7 +2,7 @@ import asyncio
 import calendar
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import paramiko
@@ -56,6 +56,17 @@ def cycle_bounds(billing_day: int, now: datetime | None = None) -> tuple[datetim
     return start, end
 
 
+def cycle_display_dates(start: datetime, end: datetime) -> tuple[str, str]:
+    """Return the inclusive local-date range shown to users.
+
+    ``end`` is the exclusive database boundary (and the next cycle's start), so
+    the final calendar day belonging to the current cycle is one day earlier.
+    """
+    start_local, end_local = to_local(start), to_local(end)
+    assert start_local is not None and end_local is not None
+    return start_local.date().isoformat(), (end_local.date() - timedelta(days=1)).isoformat()
+
+
 def measured_bytes(db: Session, line: Line, start: datetime, end: datetime) -> int:
     value = db.scalar(select(func.coalesce(func.sum(Reading.bytes_delta), 0)).where(
         Reading.line_id == line.id, Reading.recorded_at >= start, Reading.recorded_at < end
@@ -93,7 +104,7 @@ def line_view(db: Session, line: Line) -> dict[str, Any]:
         actual_status = "up"
     else:
         actual_status = "link_down"
-    start_local, end_local = to_local(start), to_local(end)
+    cycle_start, cycle_end = cycle_display_dates(start, end)
     return {
         "id": line.id, "name": line.name, "interface": line.interface,
         "firewall_id": line.firewall_id,
@@ -110,7 +121,7 @@ def line_view(db: Session, line: Line) -> dict[str, Any]:
         "rx_mbps": round((line.rx_bps or 0) / 1_000_000, 3),
         "tx_mbps": round((line.tx_bps or 0) / 1_000_000, 3),
         "total_mbps": round(((line.rx_bps or 0) + (line.tx_bps or 0)) / 1_000_000, 3),
-        "cycle_start": start_local.date().isoformat(), "cycle_end": end_local.date().isoformat(),
+        "cycle_start": cycle_start, "cycle_end": cycle_end,
         "last_polled_at": line.last_polled_at.isoformat() if line.last_polled_at else None,
         "last_polled_display": local_time_text(line.last_polled_at),
     }
